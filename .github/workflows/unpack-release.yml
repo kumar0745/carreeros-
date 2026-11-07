@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "Pavan_CareerOS_Final_Stages_1-5.zip"
+      - "release-artifacts/READY"
 
 permissions:
   contents: write
@@ -23,22 +23,25 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Expand the validated source archive and commit the project tree
+      - name: Reconstruct and publish the validated source tree
         shell: bash
         run: |
           set -euo pipefail
-          archive="Pavan_CareerOS_Final_Stages_1-5.zip"
-          if [[ ! -f "$archive" ]]; then
-            echo "No release archive found; nothing to expand."
+          artifact_dir="release-artifacts"
+          if [[ ! -f "$artifact_dir/READY" ]]; then
+            echo "Release marker absent; nothing to unpack."
             exit 0
           fi
 
+          archive="/tmp/Pavan_CareerOS_Final_Stages_1-5.zip"
+          cat "$artifact_dir"/part-*.b64 | base64 --decode > "$archive"
+          unzip -tq "$archive"
           temp_dir="$(mktemp -d)"
-          trap 'rm -rf "$temp_dir"' EXIT
+          trap 'rm -rf "$temp_dir" "$archive"' EXIT
           unzip -q "$archive" -d "$temp_dir"
           test -d "$temp_dir/pavan-careeros"
           cp -a "$temp_dir/pavan-careeros/." .
-          rm -f "$archive"
+          rm -rf "$artifact_dir"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
